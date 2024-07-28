@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Screen Capture Form</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+
+        video {
+            width: 80%;
+            margin-top: 20px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            display: inline-block;
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            color: white;
+            background-color: #007bff;
+            border: none;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #submitCapture {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Screen Capture Form</h1>
+    <form id="screenCaptureForm" method="POST" enctype="multipart/form-data" action="/upload">
+        <video id="preview" autoplay muted></video>
+        <input type="file" name="screenCapture" id="screenCapture" style="display: none;">
+        <button type="button" id="startCapture">Start Capture</button>
+        <button type="button" id="stopCapture" style="display: none;">Stop Capture</button>
+        <button type="submit" id="submitCapture" style="display: none;">Submit</button>
+    </form>
+
+    <script>
+        const startCaptureButton = document.getElementById('startCapture');
+        const stopCaptureButton = document.getElementById('stopCapture');
+        const submitCaptureButton = document.getElementById('submitCapture');
+        const videoElement = document.getElementById('preview');
+        const screenCaptureInput = document.getElementById('screenCapture');
+        let mediaRecorder;
+        let recordedChunks = [];
+
+        async function startCapture() {
+            try {
+                const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                videoElement.srcObject = stream;
+
+                                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = handleDataAvailable;
+                mediaRecorder.start();
+
+                startCaptureButton.style.display = 'none';
+                stopCaptureButton.style.display = 'block';
+            } catch (err) {
+                console.error("Error: " + err);
+            }
+        }
+
+        function stopCapture() {
+            mediaRecorder.stop();
+            videoElement.srcObject.getTracks().forEach(track => track.stop());
+
+            startCaptureButton.style.display = 'block';
+            stopCaptureButton.style.display = 'none';
+            submitCaptureButton.style.display = 'block';
+        }
+
+        function handleDataAvailable(event) {
+            if (event.data.size > 0) {
+                recordedChunks.push(event.data);
+                const blob = new Blob(recordedChunks, {
+                    type: 'video/webm'
+                });
+                const file = new File([blob], 'screenCapture.webm', {
+                    type: 'video/webm'
+                });
+                screenCaptureInput.files = createFileList(file);
+            }
+        }
+
+        function createFileList(file) {
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            return dataTransfer.files;
+        }
+
+        startCaptureButton.addEventListener('click', startCapture);
+        stopCaptureButton.addEventListener('click', stopCapture);
+    </script>
+</body>
+</html>
